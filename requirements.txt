@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-learn
+tqdm
+seaborn
+matplotlib
+scipy
+google-genai
+python-dotenv
+python=3.12
