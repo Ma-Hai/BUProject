@@ -1,6 +1,9 @@
-data files
+# data files
 data/*.pdf
 data/*.json
+
+# weird MacOS thing
+*.DS_store
 
 
 # default Python template below
