@@ -1,6 +1,7 @@
 # data files
 data/*.pdf
 data/*.json
+data/*.npy
 
 # weird MacOS thing
 *.DS_store
