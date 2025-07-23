@@ -65,6 +65,31 @@ def dist(
     # If the result is a single-element array, return it as a float
     return distance.item() if isinstance(distance, np.ndarray) and distance.size == 1 else distance
 
+STATIONS = pd.read_csv("data/stations.csv", index_col="Name")
+
+def select_businesses(name: str, df_b: pd.DataFrame) -> pd.DataFrame:
+    """Select businesses near a station by name"""
+    sel = dist(
+        df_b["latitude"],
+        df_b["longitude"],
+        STATIONS["latitude"][name],
+        STATIONS["longitude"][name],
+    ) < STATIONS["radius"][name]
+    return df_b[sel]
+
+def select_reviews(name: str, df_r: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Select reviews near a station by name, split into pre-construction and post-construction"""
+    sel_pos = dist(
+        df_r["latitude"],
+        df_r["longitude"],
+        STATIONS["Lat"][name],
+        STATIONS["Long"][name],
+    ) < STATIONS["Radius"][name]
+    sel_pre = df_r["date"] < pd.to_datetime(STATIONS["Start Date"][name])
+    sel_post = df_r["date"] < pd.to_datetime(STATIONS["End Date"][name])
+    return df_r[sel_pos & sel_pre], df_r[sel_pos & sel_post]
+    
+
 
 # # def draw_transit_lines(
 #     map_widget: tkintermapview.TkinterMapView, 
