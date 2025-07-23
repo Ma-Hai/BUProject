@@ -65,16 +65,16 @@ def dist(
     # If the result is a single-element array, return it as a float
     return distance.item() if isinstance(distance, np.ndarray) and distance.size == 1 else distance
 
-STATIONS = pd.read_csv("data/stations.csv", index_col="Name")
+STATIONS = pd.read_csv("https://docs.google.com/spreadsheets/d/1_v8HYe_p2xumjlXTIIhmSyWE32Bm6LgGjhwmbDOi2M0/export?format=csv", index_col="Name")
 
 def select_businesses(name: str, df_b: pd.DataFrame) -> pd.DataFrame:
     """Select businesses near a station by name"""
     sel = dist(
         df_b["latitude"],
         df_b["longitude"],
-        STATIONS["latitude"][name],
-        STATIONS["longitude"][name],
-    ) < STATIONS["radius"][name]
+        STATIONS["Lat"][name],
+        STATIONS["Long"][name],
+    ) < STATIONS["Radius"][name]
     return df_b[sel]
 
 def select_reviews(name: str, df_r: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
