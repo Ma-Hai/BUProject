@@ -215,3 +215,5 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+data/df_b_processed.csv
+data/df_r_processed.csv
