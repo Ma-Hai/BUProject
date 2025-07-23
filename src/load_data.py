@@ -34,6 +34,11 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     df_b["hours"] = df_b["hours"].apply(parse_hours)
     df_r["date"] = pd.to_datetime(df_r["date"])
 
+    # set review latitude/longitude to business lat/long by looking up business_id
+    df_b_by_id = df_b.set_index("business_id")
+    df_r["latitude"] = df_r["business_id"].apply(df_b_by_id["latitude"].get)
+    df_r["longitude"] = df_r["business_id"].apply(df_b_by_id["longitude"].get)
+
     return df_b, df_r
 
 if __name__ == "__main__":
