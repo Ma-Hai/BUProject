@@ -7,4 +7,5 @@ matplotlib
 scipy
 python-dotenv
 openai
+notebook
 python=3.12
