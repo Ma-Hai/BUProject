@@ -9,3 +9,10 @@ We will be using NLP to convert qualitative data into quantitative data.
 Research Question:
 
 Hypothesis:
+
+
+# Section 1: Software and Platform
+
+# Section 2: A Map of your Documentation
+
+# Section 3: Instructions for Reproducing Results
