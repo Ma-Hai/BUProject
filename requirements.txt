@@ -8,7 +8,13 @@ scipy
 python-dotenv
 openai
 notebook
+<<<<<<< HEAD
+faiss
+umap-learn
+python=3.12
+=======
 python=3.12
 gensim
 nltk
 spacy
+>>>>>>> ce98b62c101f9130c9c7ad1cb056aad4591d043d
