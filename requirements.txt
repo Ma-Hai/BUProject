@@ -8,4 +8,6 @@ scipy
 python-dotenv
 openai
 notebook
+faiss
+umap-learn
 python=3.12
