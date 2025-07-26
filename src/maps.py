@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
-import tkinter
+# import tkinter
 # import customtkinter as ctk
-import tkintermapview
+# import tkintermapview
 from tqdm import tqdm
 
 CITY_CENTER = 39.9526, -75.1652
+SQUARE = 0.01448, 0.01888 # 1-mile square in lat/long
 
 def dist(
     lat1: float | np.ndarray[np.float32],
@@ -107,33 +108,33 @@ def select_reviews(name: str, df_r: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
 #             shape = shapes[shapes["shape_id"] == shape_id].sort_values("shape_pt_sequence")
 #             map_widget.set_path(list(zip(shape["shape_pt_lat"], shape["shape_pt_lon"])), color="#" + color)
 
-if __name__ == "__main__":
-    import os
-    # from src import load_data
-    # df_b, df_r = load_data.load_yelp_data()
+# if __name__ == "__main__":
+#     import os
+#     # from src import load_data
+#     # df_b, df_r = load_data.load_yelp_data()
 
 
-    # create tkinter window
-    root_tk = tkinter.Tk()
-    root_tk.geometry(f"{1000}x{700}")
-    root_tk.title("BU Project")
+#     # create tkinter window
+#     root_tk = tkinter.Tk()
+#     root_tk.geometry(f"{1000}x{700}")
+#     root_tk.title("BU Project")
 
-    # create map widget and only use the tiles from the database, not the online server (use_database_only=True)
-    # map_widget = tkintermapview.TkinterMapView(root_tk, width=1000, height=700, corner_radius=0,
-                                # max_zoom=17)
+#     # create map widget and only use the tiles from the database, not the online server (use_database_only=True)
+#     # map_widget = tkintermapview.TkinterMapView(root_tk, width=1000, height=700, corner_radius=0,
+#                                 # max_zoom=17)
     
-    map_widget = tkintermapview.TkinterMapView(root_tk, width=1000, height=700, corner_radius=0)
-    map_widget.pack(fill="both", expand=True)
+#     map_widget = tkintermapview.TkinterMapView(root_tk, width=1000, height=700, corner_radius=0)
+#     map_widget.pack(fill="both", expand=True)
 
-    # map_widget.se t_tile_server("https://tiles.wmflabs.org/osm-no-labels/{z}/{x}/{y}.png")  # OpenStreetMap (default)
+#     # map_widget.se t_tile_server("https://tiles.wmflabs.org/osm-no-labels/{z}/{x}/{y}.png")  # OpenStreetMap (default)
 
-    map_widget.set_overlay_tile_server("http://a.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png")  # railway infrastructure
-
-
-    map_widget.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
-    map_widget.set_position(*CITY_CENTER)
-    map_widget.set_zoom(12)
+#     map_widget.set_overlay_tile_server("http://a.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png")  # railway infrastructure
 
 
+#     map_widget.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
+#     map_widget.set_position(*CITY_CENTER)
+#     map_widget.set_zoom(12)
 
-    root_tk.mainloop()
+
+
+#     root_tk.mainloop()
