@@ -1,9 +1,15 @@
 import pandas as pd
 import numpy as np
+
+import rasterio
+from rasterstats import zonal_stats
+import geopandas as gpd
+from shapely.geometry import Polygon
 # import tkinter
 # import customtkinter as ctk
 # import tkintermapview
 from tqdm import tqdm
+
 
 CITY_CENTER = 39.9526, -75.1652
 SQUARE = 0.01448, 0.01888 # 1-mile square in lat/long
@@ -90,6 +96,93 @@ def select_reviews(name: str, df_r: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
     sel_pre = df_r["date"] < pd.to_datetime(STATIONS["Start Date"][name])
     sel_post = df_r["date"] < pd.to_datetime(STATIONS["End Date"][name])
     return df_r[sel_pos & sel_pre], df_r[sel_pos & sel_post]
+
+def map_bc(df_b: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd.DataFrame:
+    min_lat = min(df_b["latitude"].min(), df_c["lat"].min())
+    max_lat = max(df_b["latitude"].max(), df_c["lat"].max())
+    min_lon = min(df_b["longitude"].min(), df_c["lng"].min())
+    max_lon = max(df_b["longitude"].max(), df_c["lng"].max())
+
+    lat_step, lon_step = grid_size * SQUARE[0], grid_size * SQUARE[1]
+
+    lats = np.arange(min_lat, max_lat, lat_step)
+    lons = np.arange(min_lon, max_lon, lon_step)
+    lats_bc, lons_bc = lats[:, None] + 0 * lons[None, :], lons[None, :] + 0 * lats[:, None]
+
+    df_m = pd.DataFrame(
+        {
+            "grid_id": np.arange(len(lats) * len(lons)),
+            "latitude": lats_bc.flatten(),
+            "longitude": lons_bc.flatten(),
+            "business_ids": [[] for _ in range(len(lats) * len(lons))],
+            "crime_ids": [[] for _ in range(len(lats) * len(lons))],
+        }
+    )
+
+    for row in df_b.itertuples():
+        lat_idx = int((row.latitude - min_lat) // lat_step)
+        lon_idx = int((row.longitude - min_lon) // lon_step)
+        df_m.loc[lat_idx * len(lons) + lon_idx, "business_ids"].append(row.business_id)
+
+    for row in df_c.itertuples():
+        lat_idx = int((row.lat - min_lat) // lat_step)
+        lon_idx = int((row.lng - min_lon) // lon_step)
+        df_m.loc[lat_idx * len(lons) + lon_idx, "crime_ids"].append(row.objectid)
+
+        raster_path = "data/usa_ppp_2020_constrained.tif" # <-- UPDATE THIS PATH
+    
+    population_raster = rasterio.open(raster_path)
+    
+    # --- Step 3: Prepare Your Grid for Analysis ---
+
+    polygons = []
+
+    for index, row in df_m.iterrows():
+        ne_corner_lat = row["latitude"]
+        ne_corner_lon = row["longitude"]
+        sw_corner_lat = ne_corner_lat - lat_step
+        sw_corner_lon = ne_corner_lon - lon_step
+        polygons.append(Polygon([
+            (sw_corner_lon, sw_corner_lat), (ne_corner_lon, sw_corner_lat),
+            (ne_corner_lon, ne_corner_lat), (sw_corner_lon, ne_corner_lat)
+        ]))
+
+    grid_gdf = gpd.GeoDataFrame(df_m, geometry=polygons, crs="EPSG:4326")
+
+
+    # --- Step 4: Perform Zonal Statistics ---
+
+    # This is the core operation. It calculates statistics of the raster pixel values
+    # that fall within each polygon of your grid.
+
+    # Ensure your grid is in the same Coordinate Reference System (CRS) as the raster.
+    if grid_gdf.crs != population_raster.crs:
+        grid_gdf = grid_gdf.to_crs(population_raster.crs)
+
+    # Use zonal_stats to calculate the sum of population pixels within each grid square.
+    # 'stats="sum"' tells the function to add up all the population values.
+    # The result is a list of dictionaries, one for each grid square.
+    stats = zonal_stats(
+        grid_gdf.geometry,
+        raster_path,
+        stats="sum",
+        all_touched=True # Includes cells that are only touched by a polygon's border
+    )
+
+
+    # --- Step 5: Aggregate and Finalize ---
+
+    # The 'stats' variable is a list of dictionaries, like [{'sum': 123.4}, {'sum': 567.8}, ...]
+    # We'll extract the 'sum' value from each dictionary.
+
+    # Add the estimated populations as a new column to your original DataFrame.
+    df_m["population"] = [d["sum"] for d in stats]
+
+    # Fill any grid cells that had no overlapping population data with 0.
+    df_m["population"] = df_m["population"].fillna(0).round().astype(int)
+
+    return df_m
+
     
 
 
