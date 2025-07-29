@@ -49,7 +49,7 @@ def load_crime_data() -> pd.DataFrame:
     # df_b["postal_code"] = df_b["postal_code"].astype(pd.Int64Dtype())
 
     df_cx = [pd.read_csv(f"data/Crime_Incidents/incidents_{y}.csv") for y in range(2006, 2023)]
-    df_c = pd.concat(df_cx).dropna()
+    df_c = pd.concat(df_cx)
 
     return df_c
 if __name__ == "__main__":
