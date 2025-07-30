@@ -16,7 +16,7 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     df_r = pd.read_csv("data/df_r_processed.csv")
 
     df_b["categories"] = df_b["categories"].str.split(", ")
-    df_b["postal_code"] = df_b["postal_code"].astype(pd.Int64Dtype())
+    df_b["postal_code"] = df_b["postal_code"].astype("Int64")
     df_b["is_open"] = df_b["is_open"] > 0
 
     def parse_hours(hours: str | float) -> dict[str, tuple[np.datetime64, np.datetime64]] | float:
@@ -32,6 +32,9 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         return {day: parse_hours_time(h) for day, h in hours.items()}
 
     df_b["hours"] = df_b["hours"].apply(parse_hours)
+
+    df_b["price_range"] = df_b["attributes"].apply(lambda a: (eval(a)["RestaurantsPriceRange2"] if isinstance(a, str) and "RestaurantsPriceRange2" in eval(a) and eval(a)["RestaurantsPriceRange2"] in "1234" else pd.NA)).astype("Int64")
+
     df_r["date"] = pd.to_datetime(df_r["date"])
 
     # set review latitude/longitude to business lat/long by looking up business_id
@@ -41,7 +44,16 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     return df_b, df_r
 
+def load_crime_data() -> pd.DataFrame:
+    # df_b = pd.read_csv("data/df_b_processed.csv")
+    # df_b["postal_code"] = df_b["postal_code"].astype(pd.Int64Dtype())
+
+    df_cx = [pd.read_csv(f"data/Crime_Incidents/incidents_{y}.csv") for y in range(2006, 2023)]
+    df_c = pd.concat(df_cx)
+
+    return df_c
 if __name__ == "__main__":
-    df_b, df_r = parse_yelp_data()
-    df_b.to_csv("data/df_b_processed.csv")
-    df_r.to_csv("data/df_r_processed.csv")
+    # df_b, df_r = parse_yelp_data()
+    # df_b.to_csv("data/df_b_processed.csv")
+    # df_r.to_csv("data/df_r_processed.csv")
+    print(load_crime_data().head())

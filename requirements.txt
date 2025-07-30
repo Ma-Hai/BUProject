@@ -8,4 +8,13 @@ scipy
 python-dotenv
 openai
 notebook
+faiss
+umap-learn
 python=3.12
+gensim
+nltk
+spacy
+shapely
+geopandas
+rasterio
+rasterstats
