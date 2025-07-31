@@ -8,8 +8,6 @@ scipy
 python-dotenv
 openai
 notebook
-faiss
-umap-learn
 python=3.12
 gensim
 nltk
@@ -18,3 +16,5 @@ shapely
 geopandas
 rasterio
 rasterstats
+shap
+xgboost

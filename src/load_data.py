@@ -23,12 +23,11 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         if isinstance(hours, float):
             return hours
         hours = eval(hours)
-        epoch = np.datetime64("1970-01-01", "D")
         def parse_hours_time(interval: str) -> tuple[np.datetime64, np.datetime64]:
             a, b = interval.split("-")
             a_h, a_m = a.split(":")
             b_h, b_m = b.split(":")
-            return epoch + np.timedelta64(int(a_h), "h") + np.timedelta64(int(a_m), "m"), epoch + np.timedelta64(int(b_h), "h") + np.timedelta64(int(b_m), "m")
+            return int(a_h) + int(a_m) / 60, int(b_h) + int(b_m) / 60
         return {day: parse_hours_time(h) for day, h in hours.items()}
 
     df_b["hours"] = df_b["hours"].apply(parse_hours)
@@ -49,9 +48,13 @@ def load_crime_data() -> pd.DataFrame:
     # df_b["postal_code"] = df_b["postal_code"].astype(pd.Int64Dtype())
 
     df_cx = [pd.read_csv(f"data/Crime_Incidents/incidents_{y}.csv") for y in range(2006, 2023)]
-    df_c = pd.concat(df_cx).dropna()
+    df_c = pd.concat(df_cx) #.dropna()
+    df_c["text_general_code"] = pd.Categorical(df_c["text_general_code"])
+    df_c["dispatch_date_time"] = pd.to_datetime(df_c["dispatch_date_time"])
+    df_c["dispatch_date_time"] = df_c["dispatch_date_time"].dt.tz_localize(None)
 
-    return df_c
+    return df_c.dropna(subset=["lat", "lng"], ignore_index=True).rename(columns={"lat": "latitude", "lng": "longitude"})
+
 if __name__ == "__main__":
     # df_b, df_r = parse_yelp_data()
     # df_b.to_csv("data/df_b_processed.csv")

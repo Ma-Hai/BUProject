@@ -5,9 +5,7 @@ import rasterio
 from rasterstats import zonal_stats
 import geopandas as gpd
 from shapely.geometry import Polygon
-# import tkinter
-# import customtkinter as ctk
-# import tkintermapview
+
 from tqdm import tqdm
 
 
@@ -97,11 +95,11 @@ def select_reviews(name: str, df_r: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
     sel_post = df_r["date"] < pd.to_datetime(STATIONS["End Date"][name])
     return df_r[sel_pos & sel_pre], df_r[sel_pos & sel_post]
 
-def map_bc(df_b: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd.DataFrame:
-    min_lat = min(df_b["latitude"].min(), df_c["lat"].min())
-    max_lat = max(df_b["latitude"].max(), df_c["lat"].max())
-    min_lon = min(df_b["longitude"].min(), df_c["lng"].min())
-    max_lon = max(df_b["longitude"].max(), df_c["lng"].max())
+def map_bc(df_b: pd.DataFrame, df_r: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd.DataFrame:
+    min_lat = min(df_b["latitude"].min(), df_c["latitude"].min())
+    max_lat = max(df_b["latitude"].max(), df_c["latitude"].max())
+    min_lon = min(df_b["longitude"].min(), df_c["longitude"].min())
+    max_lon = max(df_b["longitude"].max(), df_c["longitude"].max())
 
     lat_step, lon_step = grid_size * SQUARE[0], grid_size * SQUARE[1]
 
@@ -109,27 +107,29 @@ def map_bc(df_b: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd
     lons = np.arange(min_lon, max_lon, lon_step)
     lats_bc, lons_bc = lats[:, None] + 0 * lons[None, :], lons[None, :] + 0 * lats[:, None]
 
-    df_m = pd.DataFrame(
+
+    df_b["grid_id"] = ((df_b["latitude"] - min_lat) // lat_step).astype(int) * len(lons) + ((df_b["longitude"] - min_lon) // lon_step).astype(int)
+    df_r["grid_id"] = ((df_r["latitude"] - min_lat) // lat_step).astype(int) * len(lons) + ((df_r["longitude"] - min_lon) // lon_step).astype(int)
+    df_c["grid_id"] = ((df_c["latitude"] - min_lat) // lat_step).astype(int) * len(lons) + ((df_c["longitude"] - min_lon) // lon_step).astype(int)
+
+
+    grid_ids = np.arange(len(lats) * len(lons))
+    df_g = pd.DataFrame(
         {
-            "grid_id": np.arange(len(lats) * len(lons)),
+            "grid_id": grid_ids,
             "latitude": lats_bc.flatten(),
             "longitude": lons_bc.flatten(),
-            "business_ids": [[] for _ in range(len(lats) * len(lons))],
-            "crime_ids": [[] for _ in range(len(lats) * len(lons))],
+            "business_ids": [list(df_b.loc[df_b["grid_id"] == grid_id, "business_id"]) for grid_id in grid_ids],
+            "review_ids": [list(df_r.loc[df_r["grid_id"] == grid_id, "review_id"]) for grid_id in grid_ids],
+            "crime_ids": [list(df_c.loc[df_c["grid_id"] == grid_id, "objectid"]) for grid_id in grid_ids],
         }
     )
 
-    for row in df_b.itertuples():
-        lat_idx = int((row.latitude - min_lat) // lat_step)
-        lon_idx = int((row.longitude - min_lon) // lon_step)
-        df_m.loc[lat_idx * len(lons) + lon_idx, "business_ids"].append(row.business_id)
+    df_g["n_businesses"] = df_g["business_ids"].apply(len)
+    df_g["n_reviews"] = df_g["review_ids"].apply(len)
+    df_g["n_crimes"] = df_g["crime_ids"].apply(len)
 
-    for row in df_c.itertuples():
-        lat_idx = int((row.lat - min_lat) // lat_step)
-        lon_idx = int((row.lng - min_lon) // lon_step)
-        df_m.loc[lat_idx * len(lons) + lon_idx, "crime_ids"].append(row.objectid)
-
-        raster_path = "data/usa_ppp_2020_constrained.tif" # <-- UPDATE THIS PATH
+    raster_path = "data/usa_ppp_2020_constrained.tif"
     
     population_raster = rasterio.open(raster_path)
     
@@ -137,17 +137,17 @@ def map_bc(df_b: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd
 
     polygons = []
 
-    for index, row in df_m.iterrows():
-        ne_corner_lat = row["latitude"]
-        ne_corner_lon = row["longitude"]
-        sw_corner_lat = ne_corner_lat - lat_step
-        sw_corner_lon = ne_corner_lon - lon_step
+    for index, row in df_g.iterrows():
+        sw_corner_lat = row["latitude"]
+        sw_corner_lon = row["longitude"]
+        ne_corner_lat = sw_corner_lat + lat_step
+        ne_corner_lon = sw_corner_lon + lon_step
         polygons.append(Polygon([
             (sw_corner_lon, sw_corner_lat), (ne_corner_lon, sw_corner_lat),
             (ne_corner_lon, ne_corner_lat), (sw_corner_lon, ne_corner_lat)
         ]))
 
-    grid_gdf = gpd.GeoDataFrame(df_m, geometry=polygons, crs="EPSG:4326")
+    grid_gdf = gpd.GeoDataFrame(df_g, geometry=polygons, crs="EPSG:4326")
 
 
     # --- Step 4: Perform Zonal Statistics ---
@@ -169,21 +169,23 @@ def map_bc(df_b: pd.DataFrame, df_c: pd.DataFrame, grid_size: float = 1.0) -> pd
         all_touched=True # Includes cells that are only touched by a polygon's border
     )
 
+    df_g["population"] = [d["sum"] for d in stats]
+    df_g["population"] = df_g["population"].fillna(0).round().astype(int)
 
-    # --- Step 5: Aggregate and Finalize ---
-
-    # The 'stats' variable is a list of dictionaries, like [{'sum': 123.4}, {'sum': 567.8}, ...]
-    # We'll extract the 'sum' value from each dictionary.
-
-    # Add the estimated populations as a new column to your original DataFrame.
-    df_m["population"] = [d["sum"] for d in stats]
-
-    # Fill any grid cells that had no overlapping population data with 0.
-    df_m["population"] = df_m["population"].fillna(0).round().astype(int)
-
-    return df_m
-
+    df_g["crime_rate"] = df_g["n_crimes"] / df_g["population"]
+    df_g.loc[df_g["population"] == 0, "crime_rate"] = pd.NA
     
+    return df_g
+
+
+def match(index: pd.Series, target: pd.Series) -> pd.Series:
+    """
+    given an index series of lists of indices into the target series,
+    return a series where each index is replaced by a list of the values in the target series
+    corresponding to the indices in the index series.
+    """
+
+    return index.apply(lambda ix: list(target.get(ix, pd.NA)))
 
 
 # # def draw_transit_lines(

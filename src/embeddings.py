@@ -60,6 +60,9 @@ def embedding(text: str | list[str]) -> np.ndarray[np.float32]:
     )
     return np.array([entry.embedding for entry in response.data], dtype=np.float32)
 
+def normalize(arr: np.ndarray[np.float32]) -> np.ndarray[np.float32]:
+    return arr / np.sqrt(np.sum(arr ** 2, axis=-1, keepdims=True))
+
 def _embedding_long(text: str | list[str]) -> np.ndarray[np.float32]:
     """large-scale embedding function, DO NOT USE"""
     if isinstance(text, str):
