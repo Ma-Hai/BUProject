@@ -9,9 +9,6 @@ python-dotenv
 openai
 notebook
 python=3.12
-gensim
-nltk
-spacy
 shapely
 geopandas
 rasterio

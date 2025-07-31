@@ -6,8 +6,6 @@ from rasterstats import zonal_stats
 import geopandas as gpd
 from shapely.geometry import Polygon
 
-from tqdm import tqdm
-
 
 CITY_CENTER = 39.9526, -75.1652
 SQUARE = 0.01448, 0.01888 # 1-mile square in lat/long

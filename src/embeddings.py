@@ -10,36 +10,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+assert "OPENAI_API_KEY" in os.environ, "Please ensure an OPENAI_API_KEY is set."
+
 CLIENT = openai.OpenAI()
-
-def cos_sim(
-        query: np.ndarray[np.float32], 
-        keys: np.ndarray[np.float32], 
-        batch_size: int | None = 10000,
-        prog_bar: bool = True,
-    ) -> np.ndarray[np.float32]:
-    """Compute cosine similarity between a query vector and a batch of key vectors.
-    Args:
-        query: A 1d numpy array representing the query vector.
-        keys: A 2d numpy array where each row is a key vector.
-        batch_size: The number of keys to process in each batch. If None, will process the whole thing at once.
-        prog_bar: Whether to show a progress bar.
-    Returns:
-        A 1d numpy array of cosine similarity values, one for each key vector.
-    """
-    
-    if batch_size is None:
-        batch_size = len(keys)
-
-    # disable progress bar if only one batch
-    if batch_size >= len(keys):
-        prog_bar = False
-
-    vals = np.zeros(len(keys))
-    for i in tqdm(range(0, len(keys), batch_size), disable=not prog_bar):
-        np.matmul(keys[i: i + batch_size], query, out=vals[i: i + batch_size])
-
-    return vals
 
 def embedding(text: str | list[str]) -> np.ndarray[np.float32]:
     """Text -> vector embedding using OpenAI API.
@@ -63,13 +36,14 @@ def embedding(text: str | list[str]) -> np.ndarray[np.float32]:
 def normalize(arr: np.ndarray[np.float32]) -> np.ndarray[np.float32]:
     return arr / np.sqrt(np.sum(arr ** 2, axis=-1, keepdims=True))
 
-def _embedding_long(text: str | list[str]) -> np.ndarray[np.float32]:
-    """large-scale embedding function, DO NOT USE"""
-    if isinstance(text, str):
-        return _embedding_long([text])[0]
-    assert not os.path.exists("data/r_emb_large_03.npy"), "ABORTING TO AVOID FILE OVERWRITE"
+def embedding_batch(text: str | list[str], path: str) -> np.ndarray[np.float32]:
+    """large-scale embedding function, for preprocessing"""
+    if os.path.exists(path):
+        print("Aborting to avoid file overwrite.")
+        return np.lib.format.open_memmap(path)
+
     out = np.lib.format.open_memmap(
-        "data/r_emb_large_03.npy", 
+        path, 
         mode="w+", 
         dtype=np.float32, 
         shape=(len(text), 3072),
@@ -95,11 +69,3 @@ def _embedding_long(text: str | list[str]) -> np.ndarray[np.float32]:
                 wait *= 2
                 
     return out
-    
-
-if __name__ == "__main__":
-    assert False, "DO NOT RUN THIS! Just download it."
-    df_r = pd.read_csv("data/df_r_processed.csv").set_index("review_id")
-    df_r["text"] = df_r["text"].str.replace(r"\.{3,}", "...", regex=True)
-    out = _embedding_long(list(df_r["text"]))
-    breakpoint()

@@ -1,15 +1,5 @@
-
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
-
-def parse_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    df_b = pd.read_json("data/yelp_dataset/yelp_academic_dataset_business.json", lines=True)
-    df_b = df_b[df_b["city"].str.lower() == "philadelphia"]
-    philadelphia_businesses = set(df_b["business_id"])
-    df_r_chunks = pd.read_json("data/yelp_dataset/yelp_academic_dataset_review.json", lines=True, chunksize=100000)
-    df_r = pd.concat([chunk[np.array([[b_id in philadelphia_businesses] for b_id in chunk["business_id"]], dtype=bool)] for chunk in tqdm(df_r_chunks, total=70)])
-    return df_b, df_r
 
 def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     df_b = pd.read_csv("data/df_b_processed.csv")
@@ -44,19 +34,10 @@ def load_yelp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     return df_b, df_r
 
 def load_crime_data() -> pd.DataFrame:
-    # df_b = pd.read_csv("data/df_b_processed.csv")
-    # df_b["postal_code"] = df_b["postal_code"].astype(pd.Int64Dtype())
-
     df_cx = [pd.read_csv(f"data/Crime_Incidents/incidents_{y}.csv") for y in range(2006, 2023)]
-    df_c = pd.concat(df_cx) #.dropna()
+    df_c = pd.concat(df_cx)
     df_c["text_general_code"] = pd.Categorical(df_c["text_general_code"])
     df_c["dispatch_date_time"] = pd.to_datetime(df_c["dispatch_date_time"])
     df_c["dispatch_date_time"] = df_c["dispatch_date_time"].dt.tz_localize(None)
 
     return df_c.dropna(subset=["lat", "lng"], ignore_index=True).rename(columns={"lat": "latitude", "lng": "longitude"})
-
-if __name__ == "__main__":
-    # df_b, df_r = parse_yelp_data()
-    # df_b.to_csv("data/df_b_processed.csv")
-    # df_r.to_csv("data/df_r_processed.csv")
-    print(load_crime_data().head())
